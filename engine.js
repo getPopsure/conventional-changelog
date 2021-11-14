@@ -31,20 +31,13 @@ module.exports = function(options) {
   var getFromOptionsOrDefaults = function(key) {
     return options[key] || defaults[key];
   };
-  var getJiraIssueLocation = function(location, type, scope, jiraWithDecorators, subject) {
-    switch(location) {
-      case 'pre-type':
-        return jiraWithDecorators + type + scope + ': ' + subject;
-        break;
-      case 'pre-description':
-        return type + scope + ': ' + jiraWithDecorators + subject;
-        break;
-      case 'post-description':
-        return type + scope + ': ' + subject + ' ' + jiraWithDecorators;
-        break;
-      default:
-        return type + scope + ': ' + jiraWithDecorators + subject;
-    }
+  var getLinearIssueLocation = function(
+    type,
+    scope,
+    linearWithDecorators,
+    subject
+  ) {
+    return type + scope + ': ' + linearWithDecorators + subject;
   };
   var types = getFromOptionsOrDefaults('types');
 
@@ -52,22 +45,24 @@ module.exports = function(options) {
   var choices = map(types, function(type, key) {
     return {
       name: rightPad(key + ':', length) + ' ' + type.description,
-      value: key
+      value: key,
     };
   });
 
   const minHeaderWidth = getFromOptionsOrDefaults('minHeaderWidth');
   const maxHeaderWidth = getFromOptionsOrDefaults('maxHeaderWidth');
 
-  const branchName = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-  const jiraIssueRegex = /(?<jiraIssue>(?<!([A-Z0-9]{1,10})-?)[A-Z0-9]+-\d+)/;
-  const matchResult = branchName.match(jiraIssueRegex);
-  const jiraIssue =
-    matchResult && matchResult.groups && matchResult.groups.jiraIssue;
-  const hasScopes =
-    options.scopes &&
-    Array.isArray(options.scopes) &&
-    options.scopes.length > 0;
+  const branchName = execSync('git rev-parse --abbrev-ref HEAD')
+    .toString()
+    .trim();
+  const linearIssueRegex = /\w+\/(?<linearIssue>[a-z-0-9]{1,10})(?<linearIssueDescription>(-.+))/;
+  const matchResult = branchName.match(linearIssueRegex);
+  const linearIssue =
+    matchResult && matchResult.groups && matchResult.groups.linearIssue;
+  const linearIssueDescription =
+    matchResult &&
+    matchResult.groups &&
+    matchResult.groups.linearIssueDescription.replace(/-/g, ' ');
 
   return {
     // When a user runs `git cz`, prompter will
@@ -97,86 +92,79 @@ module.exports = function(options) {
           name: 'type',
           message: "Select the type of change that you're committing:",
           choices: choices,
-          default: options.defaultType
+          default: options.defaultType,
         },
         {
           type: 'input',
-          name: 'jira',
-          message:
-            'Enter JIRA issue (' +
-            getFromOptionsOrDefaults('jiraPrefix') +
-            '-12345)' +
-            (options.jiraOptional ? ' (optional)' : '') +
-            ':',
-          when: options.jiraMode,
-          default: jiraIssue || '',
-          validate: function(jira) {
-            return (
-              (options.jiraOptional && !jira) ||
-              /^(?<!([A-Z0-9]{1,10})-?)[A-Z0-9]+-\d+$/.test(jira)
-            );
+          name: 'linear',
+          message: 'Enter Linear issue (e.g. sto-123): (press enter to skip)',
+          default: linearIssue || '',
+          validate: function(linear) {
+            if (!linear) {
+              return true;
+            }
+
+            return /^(?<!([A-Z0-9]{1,10})-?)[A-Z0-9]+-\d+$/.test(linear);
           },
-          filter: function(jira) {
-            return jira.toUpperCase();
-          }
+          filter: function(linear) {
+            return linear.toUpperCase();
+          },
         },
         {
-          type: hasScopes ? 'list' : 'input',
+          type: 'input',
           name: 'scope',
-          when: !options.skipScope,
-          choices: hasScopes ? options.scopes : undefined,
           message:
-            'What is the scope of this change (e.g. component or file name): ' +
-            (hasScopes ? '(select from the list)' : '(press enter to skip)'),
+            'What is the scope of this change (e.g. component or file name): (press enter to skip)',
           default: options.defaultScope,
           filter: function(value) {
             return value.trim().toLowerCase();
-          }
+          },
         },
         {
           type: 'limitedInput',
           name: 'subject',
           message: 'Write a short, imperative tense description of the change:',
-          default: options.defaultSubject,
+          default: linearIssueDescription || options.defaultSubject,
           maxLength: maxHeaderWidth - (options.exclamationMark ? 1 : 0),
           leadingLabel: answers => {
-            const jira = answers.jira ? ` ${answers.jira}` : '';
+            const linear = answers.linear ? ` ${answers.linear}` : '';
             let scope = '';
 
             if (answers.scope && answers.scope !== 'none') {
               scope = `(${answers.scope})`;
             }
 
-            return `${answers.type}${scope}:${jira}`;
+            return `${answers.type}${scope}:${linear}`;
           },
           validate: input =>
             input.length >= minHeaderWidth ||
             `The subject must have at least ${minHeaderWidth} characters`,
           filter: function(subject) {
             return filterSubject(subject);
-          }
+          },
         },
         {
           type: 'input',
           name: 'body',
           message:
             'Provide a longer description of the change: (press enter to skip)\n',
-          default: options.defaultBody
+          default: options.defaultBody,
         },
         {
           type: 'confirm',
           name: 'isBreaking',
           message: 'Are there any breaking changes?',
-          default: false
+          default: false,
         },
         {
           type: 'confirm',
           name: 'isBreaking',
-          message: 'You do know that this will bump the major version, are you sure?',
+          message:
+            'You do know that this will bump the major version, are you sure?',
           default: false,
           when: function(answers) {
             return answers.isBreaking;
-          }
+          },
         },
         {
           type: 'input',
@@ -184,15 +172,7 @@ module.exports = function(options) {
           message: 'Describe the breaking changes:\n',
           when: function(answers) {
             return answers.isBreaking;
-          }
-        },
-
-        {
-          type: 'confirm',
-          name: 'isIssueAffected',
-          message: 'Does this change affect any open issues?',
-          default: options.defaultIssues ? true : false,
-          when: !options.jiraMode
+          },
         },
         {
           type: 'input',
@@ -204,7 +184,7 @@ module.exports = function(options) {
             return (
               answers.isIssueAffected && !answers.body && !answers.breakingBody
             );
-          }
+          },
         },
         {
           type: 'input',
@@ -213,15 +193,15 @@ module.exports = function(options) {
           when: function(answers) {
             return answers.isIssueAffected;
           },
-          default: options.defaultIssues ? options.defaultIssues : undefined
-        }
+          default: options.defaultIssues ? options.defaultIssues : undefined,
+        },
       ]).then(async function(answers) {
         var wrapOptions = {
           trim: true,
           cut: false,
           newline: '\n',
           indent: '',
-          width: options.maxLineWidth
+          width: options.maxLineWidth,
         };
 
         // parentheses are only needed when a scope is present
@@ -229,13 +209,18 @@ module.exports = function(options) {
         const addExclamationMark = options.exclamationMark && answers.breaking;
         scope = addExclamationMark ? scope + '!' : scope;
 
-        // Get Jira issue prepend and append decorators
-        var prepend = options.jiraPrepend || ''
-        var append = options.jiraAppend || ''
-        var jiraWithDecorators = answers.jira ? prepend + answers.jira + append + ' ': '';
+        // Get Linear issue prepend and append decorators
+        var linearWithDecorators = answers.linear
+          ? '[' + answers.linear + ']' + ' '
+          : '';
 
         // Hard limit this line in the validate
-        const head = getJiraIssueLocation(options.jiraLocation, answers.type, scope, jiraWithDecorators, answers.subject);
+        const head = getLinearIssueLocation(
+          answers.type,
+          scope,
+          linearWithDecorators,
+          answers.subject
+        );
 
         // Wrap these lines at options.maxLineWidth characters
         var body = answers.body ? wrap(answers.body, wrapOptions) : false;
@@ -263,14 +248,14 @@ module.exports = function(options) {
           {
             type: 'confirm',
             name: 'doCommit',
-            message: 'Are you sure that you want to commit?'
-          }
+            message: 'Are you sure that you want to commit?',
+          },
         ]);
 
         if (doCommit) {
           commit(fullCommit);
         }
       });
-    }
+    },
   };
 };

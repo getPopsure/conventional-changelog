@@ -1,8 +1,12 @@
-[*]
+# EditorConfig is awesome: https://EditorConfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Basic text formatting for web files
+[*.{js,css,html,jsx}]
 end_of_line = lf
-charset = utf-8
-indent_size = 2
-indent_style = space
-insert_final_newline = true
-max_line_length = 80
 trim_trailing_whitespace = true
+insert_final_newline = true
+indent_style = space
+indent_size = 2

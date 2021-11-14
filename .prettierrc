@@ -1,5 +1,5 @@
 {
-  "printWidth": 80,
-  "endOfLine": "lf",
-  "singleQuote": true
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "printWidth": 80
 }

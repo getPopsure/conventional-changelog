@@ -19,16 +19,6 @@ function getEnvOrConfig(env, configVar, defaultValue) {
 const options = {
   types: conventionalCommitTypes,
   scopes: config.scopes,
-  jiraMode: getEnvOrConfig(
-    process.env.CZ_JIRA_MODE,
-    config.jiraMode,
-    defaults.jiraMode
-  ),
-  skipScope: getEnvOrConfig(
-    process.env.CZ_SKIP_SCOPE,
-    config.skipScope,
-    defaults.skipScope
-  ),
   defaultType: process.env.CZ_TYPE || config.defaultType,
   defaultScope: process.env.CZ_SCOPE || config.defaultScope,
   defaultSubject: process.env.CZ_SUBJECT || config.defaultSubject,
@@ -49,32 +39,11 @@ const options = {
       parseInt(process.env.CZ_MAX_LINE_WIDTH)) ||
     config.maxLineWidth ||
     defaults.maxLineWidth,
-  jiraOptional: getEnvOrConfig(
-    process.env.CZ_JIRA_OPTIONAL,
-    config.jiraOptional,
-    defaults.jiraOptional
+  exclamationMark: getEnvOrConfig(
+    process.env.CZ_EXCLAMATION_MARK,
+    config.exclamationMark,
+    defaults.exclamationMark
   ),
-  jiraPrefix:
-    process.env.CZ_JIRA_PREFIX ||
-    config.jiraPrefix ||
-    defaults.jiraPrefix,
-  jiraLocation:
-    process.env.CZ_JIRA_LOCATION ||
-    config.jiraLocation ||
-    defaults.jiraLocation,
-  jiraPrepend:
-    process.env.CZ_JIRA_PREPEND ||
-    config.jiraPrepend ||
-    defaults.jiraPrepend,
-  jiraAppend:
-    process.env.CZ_JIRA_APPEND ||
-    config.jiraAppend ||
-    defaults.jiraAppend,
-    exclamationMark: getEnvOrConfig(
-      process.env.CZ_EXCLAMATION_MARK,
-      config.exclamationMark,
-      defaults.exclamationMark
-    )
 };
 
 (function(options) {
