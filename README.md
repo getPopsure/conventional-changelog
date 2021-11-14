@@ -40,7 +40,7 @@ git commit
 
 You should be asked a few questions to interactively format your commit message.
 
-If you're using the default branch formatting form Linear, the issue number and description will be infered from the branch name (e.g. `vincent/cha-2790-moved-checkbox-into-separate-column` issue: cha-270, description: Moved checkbox into separate column).
+If you're using the default branch formatting form Linear (⇧ + ⌘ + .), the issue number and description will be infered from the branch name (e.g. `vincent/cha-2790-moved-checkbox-into-separate-column` issue: cha-270, description: Moved checkbox into separate column).
 
 ![Gif of terminal when using @getpopsure/conventional-commit](https://github.com/getPopsure/conventional-commit/blob/main/images/demo.gif)
 
